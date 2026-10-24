@@ -1,0 +1,1348 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>TuProfe20 Lab: Cuadriláteros-Trapecio</title>
+    
+    <!-- Carga de Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Carga de Fuentes Poppins -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    
+    <!-- React & Babel -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <!-- KaTeX para Fórmulas Matemáticas en LaTeX -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        app: ['Poppins', 'sans-serif'],
+                    },
+                    animation: {
+                        floatUp: 'floatUp linear infinite',
+                        slideInRight: 'slideInRight 0.35s ease-out forwards',
+                        slideInUp: 'slideInUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards',
+                        robotFloat: 'robotFloat 3s ease-in-out infinite',
+                        robotJump: 'robotJump 1s cubic-bezier(0.28, 0.84, 0.42, 1) infinite',
+                        robotTalkArmL: 'robotTalkArmL 0.6s ease-in-out infinite',
+                        robotTalkArmR: 'robotTalkArmR 0.6s ease-in-out infinite 0.1s',
+                    },
+                    keyframes: {
+                        floatUp: {
+                            '0%': { transform: 'translateY(105vh) rotate(0deg)' },
+                            '100%': { transform: 'translateY(-25vh) rotate(360deg)' }
+                        },
+                        slideInRight: {
+                            '0%': { opacity: 0, transform: 'translateX(20px)' },
+                            '100%': { opacity: 1, transform: 'translateX(0)' }
+                        },
+                        slideInUp: {
+                            'from': { opacity: 0, transform: 'translateY(40px)' },
+                            'to': { opacity: 1, transform: 'translateY(0)' }
+                        },
+                        robotFloat: {
+                            '0%, 100%': { transform: 'translateY(0)' },
+                            '50%': { transform: 'translateY(-8px)' }
+                        },
+                        robotJump: {
+                            '0%, 100%': { transform: 'translateY(0)' },
+                            '30%': { transform: 'translateY(-18px)' }
+                        },
+                        robotTalkArmL: {
+                            '0%, 100%': { transform: 'rotate(45deg)' },
+                            '50%': { transform: 'rotate(90deg)' }
+                        },
+                        robotTalkArmR: {
+                            '0%, 100%': { transform: 'rotate(-45deg)' },
+                            '50%': { transform: 'rotate(-90deg)' }
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <style>
+        body { 
+            font-family: 'Poppins', sans-serif;
+            margin: 0; 
+            padding: 0; 
+            background-color: #0a0f1d;
+            overflow-x: hidden; 
+            touch-action: manipulation; 
+        }
+        
+        /* Overrides de KaTeX para alta legibilidad */
+        .katex-html { 
+            text-shadow: 0 0 1px currentColor; 
+            font-weight: bold;
+        }
+        .katex { font-size: 1.12em !important; font-weight: bold; }
+        .katex-display { margin: 0 !important; }
+
+        .interactive-svg { touch-action: none; user-select: none; }
+        .draggable-node { cursor: grab; transition: r 0.15s ease, filter 0.15s ease; touch-action: none; }
+        .draggable-node:hover { r: 16; filter: drop-shadow(0 4px 10px rgba(37, 99, 235, 0.45)) brightness(1.08); }
+        .draggable-node:active { cursor: grabbing; r: 19; }
+
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: rgba(0,0,0,0.05); }
+        ::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.2); border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(0,0,0,0.3); }
+    </style>
+</head>
+<body>
+    <div id="root" class="font-app w-full min-h-[100dvh]"></div>
+
+    <script type="text/babel">
+        const { useState, useRef, useMemo } = React;
+
+        /* Renderizador KaTeX */
+        const Latex = ({ math, block = false, className = "" }) => {
+            const html = useMemo(() => {
+                if (window.katex) {
+                    try {
+                        return window.katex.renderToString(math, {
+                            throwOnError: false,
+                            displayMode: block,
+                            strict: false
+                        });
+                    } catch (e) {
+                        return math;
+                    }
+                }
+                return math;
+            }, [math, block]);
+
+            return <span className={className} dangerouslySetInnerHTML={{ __html: html }} />;
+        };
+
+        /* Iconos Vectoriales estilo Lucide */
+        const Icon = ({ paths, className = "", size = 24, fill = "none" }) => (
+            <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill={fill} stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className={className} dangerouslySetInnerHTML={{ __html: paths }} />
+        );
+
+        const Icons = {
+            Volume2: (p) => <Icon {...p} paths='<polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/>' />,
+            VolumeX: (p) => <Icon {...p} paths='<polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="23" x2="17" y1="9" y2="15"/><line x1="17" x2="23" y1="9" y2="15"/>' />,
+            Refresh: (p) => <Icon {...p} paths='<path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/>' />,
+            Sparkles: (p) => <Icon {...p} paths='<path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/>' />,
+            Eye: (p) => <Icon {...p} paths='<path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/>' />,
+            Home: (p) => <Icon {...p} paths='<path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>' />,
+            BookOpen: (p) => <Icon {...p} paths='<path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>' />,
+            ChevronLeft: (p) => <Icon {...p} paths='<path d="m15 18-6-6 6-6"/>' />,
+            ChevronRight: (p) => <Icon {...p} paths='<path d="m9 18 6-6-6-6"/>' />,
+            Shapes: (p) => <Icon {...p} paths='<path d="M8.3 10a.7.7 0 0 1-.626-1.079L11.4 3a.7.7 0 0 1 1.198-.043L16.3 8.9a.7.7 0 0 1-.572 1.1Z"/><rect x="3" y="14" width="7" height="7" rx="1"/><circle cx="17.5" cy="17.5" r="3.5"/>' />,
+            Ruler: (p) => <Icon {...p} paths='<path d="M21.3 15.3a2.4 2.4 0 0 1 0 3.4l-2.6 2.6a2.4 2.4 0 0 1-3.4 0L2.7 8.7a2.41 2.41 0 0 1 0-3.4l2.6-2.6a2.41 2.41 0 0 1 3.4 0Z"/><path d="m14.5 12.5 2-2"/><path d="m11.5 9.5 2-2"/><path d="m8.5 6.5 2-2"/><path d="m17.5 15.5 2-2"/>' />,
+            Compass: (p) => <Icon {...p} paths='<circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/>' />,
+            Layers: (p) => <Icon {...p} paths='<polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/>' />,
+            Minimize2: (p) => <Icon {...p} paths='<polyline points="4 14 10 14 10 20"/><polyline points="20 10 14 10 14 4"/><line x1="14" x2="21" y1="10" y2="3"/><line x1="3" x2="10" y1="21" y2="14"/>' />
+        };
+
+        /* Controlador de Audio */
+        const AudioController = {
+            ctx: null,
+            muted: false,
+            init: function() {
+                if (this.ctx) return;
+                const AudioContext = window.AudioContext || window.webkitAudioContext;
+                if (AudioContext) this.ctx = new AudioContext();
+            },
+            play: function(type) {
+                if (this.muted || !this.ctx) return;
+                if (this.ctx.state === 'suspended') this.ctx.resume();
+                const now = this.ctx.currentTime;
+                
+                if (type === 'pop') {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.connect(gain); gain.connect(this.ctx.destination);
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(450, now);
+                    osc.frequency.exponentialRampToValueAtTime(750, now + 0.09);
+                    gain.gain.setValueAtTime(0.22, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.09);
+                    osc.start(now); osc.stop(now + 0.09);
+                } else if (type === 'pop-reverse') {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.connect(gain); gain.connect(this.ctx.destination);
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(600, now);
+                    osc.frequency.exponentialRampToValueAtTime(280, now + 0.14);
+                    gain.gain.setValueAtTime(0.2, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.14);
+                    osc.start(now); osc.stop(now + 0.14);
+                } else if (type === 'swoosh') {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.connect(gain); gain.connect(this.ctx.destination);
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(280, now);
+                    osc.frequency.exponentialRampToValueAtTime(60, now + 0.18);
+                    gain.gain.setValueAtTime(0.22, now);
+                    gain.gain.linearRampToValueAtTime(0.01, now + 0.18);
+                    osc.start(now); osc.stop(now + 0.18);
+                } else if (type === 'success') {
+                    const notes = [523.25, 659.25, 783.99, 1046.50];
+                    notes.forEach((freq, i) => {
+                        const o = this.ctx.createOscillator();
+                        const g = this.ctx.createGain();
+                        o.type = 'triangle';
+                        o.frequency.value = freq;
+                        o.connect(g); g.connect(this.ctx.destination);
+                        const startTime = now + (i * 0.07);
+                        g.gain.setValueAtTime(0, startTime);
+                        g.gain.linearRampToValueAtTime(0.18, startTime + 0.04);
+                        g.gain.linearRampToValueAtTime(0, startTime + 0.32);
+                        o.start(startTime); o.stop(startTime + 0.32);
+                    });
+                }
+            },
+            toggleMute: function() {
+                this.muted = !this.muted;
+                return this.muted;
+            }
+        };
+
+        /* Motor Geométrico Vectorial */
+        const GeoUtils = {
+            dist: (p1, p2) => Math.hypot(p2.x - p1.x, p2.y - p1.y),
+            mid: (p1, p2) => ({ x: (p1.x + p2.x) / 2, y: (p1.y + p2.y) / 2 }),
+            norm: (v) => {
+                const l = Math.hypot(v.x, v.y) || 1;
+                return { x: v.x / l, y: v.y / l };
+            },
+            interiorAngleDeg: (prev, V, next) => {
+                const u = GeoUtils.norm({ x: prev.x - V.x, y: prev.y - V.y });
+                const v = GeoUtils.norm({ x: next.x - V.x, y: next.y - V.y });
+                const dot = Math.max(-1, Math.min(1, u.x * v.x + u.y * v.y));
+                return (Math.acos(dot) * 180) / Math.PI;
+            },
+            bisectorDir: (prev, V, next) => {
+                const u = GeoUtils.norm({ x: prev.x - V.x, y: prev.y - V.y });
+                const v = GeoUtils.norm({ x: next.x - V.x, y: next.y - V.y });
+                return GeoUtils.norm({ x: u.x + v.x, y: u.y + v.y });
+            },
+            intersectRays: (P1, d1, P2, d2) => {
+                const det = d1.x * (-d2.y) - d1.y * (-d2.x);
+                if (Math.abs(det) < 1e-5) return null;
+                const dx = P2.x - P1.x;
+                const dy = P2.y - P1.y;
+                const t = (dx * (-d2.y) - dy * (-d2.x)) / det;
+                return { x: P1.x + t * d1.x, y: P1.y + t * d1.y };
+            },
+            wedgePath: (V, P1, P2, radius = 32) => {
+                const a1 = Math.atan2(P1.y - V.y, P1.x - V.x);
+                const a2 = Math.atan2(P2.y - V.y, P2.x - V.x);
+                let diff = a2 - a1;
+                while (diff <= -Math.PI) diff += 2 * Math.PI;
+                while (diff > Math.PI) diff -= 2 * Math.PI;
+                const sweep = diff >= 0 ? 1 : 0;
+                const sx = V.x + radius * Math.cos(a1);
+                const sy = V.y + radius * Math.sin(a1);
+                const ex = V.x + radius * Math.cos(a2);
+                const ey = V.y + radius * Math.sin(a2);
+                return `M ${V.x} ${V.y} L ${sx} ${sy} A ${radius} ${radius} 0 0 ${sweep} ${ex} ${ey} Z`;
+            },
+            arcOnlyPath: (V, P1, P2, radius = 32) => {
+                const a1 = Math.atan2(P1.y - V.y, P1.x - V.x);
+                const a2 = Math.atan2(P2.y - V.y, P2.x - V.x);
+                let diff = a2 - a1;
+                while (diff <= -Math.PI) diff += 2 * Math.PI;
+                while (diff > Math.PI) diff -= 2 * Math.PI;
+                const sweep = diff >= 0 ? 1 : 0;
+                const sx = V.x + radius * Math.cos(a1);
+                const sy = V.y + radius * Math.sin(a1);
+                const ex = V.x + radius * Math.cos(a2);
+                const ey = V.y + radius * Math.sin(a2);
+                return `M ${sx} ${sy} A ${radius} ${radius} 0 0 ${sweep} ${ex} ${ey}`;
+            },
+            tickMark: (p1, p2, count = 1, size = 8) => {
+                const mid = GeoUtils.mid(p1, p2);
+                const dir = GeoUtils.norm({ x: p2.x - p1.x, y: p2.y - p1.y });
+                const n = { x: -dir.y, y: dir.x };
+                const lines = [];
+                const spacing = 6;
+                const startOffset = -((count - 1) * spacing) / 2;
+                for (let i = 0; i < count; i++) {
+                    const off = startOffset + i * spacing;
+                    const cx = mid.x + dir.x * off;
+                    const cy = mid.y + dir.y * off;
+                    lines.push({
+                        x1: cx - n.x * size,
+                        y1: cy - n.y * size,
+                        x2: cx + n.x * size,
+                        y2: cy + n.y * size
+                    });
+                }
+                return lines;
+            }
+        };
+
+        const THEOREMS = [
+            {
+                id: 1,
+                type: 'classification',
+                badge: 'Módulo 1',
+                icon: 'Shapes',
+                color: 'from-emerald-500/30 to-green-600/30',
+                shortTitle: 'Clasificación de Trapecios',
+                title: 'Clasificación: Isósceles, Escaleno y Rectángulo',
+                latexFormula: '\\overline{BC} \\parallel \\overline{AD} \\implies \\alpha + \\beta = 180^\\circ',
+                statement: 'Sea BC // AD (Base Menor y Base Mayor paralelas). Explora dinámicamente el Trapecio Isósceles, Escaleno y Rectángulo arrastrando sus vértices.',
+                qa: 'a) ¿Cómo se relacionan los lados laterales en cada tipo?',
+                qb: 'b) Comprueba que los ángulos conjugados suman 180°.'
+            },
+            {
+                id: 2,
+                type: 'median',
+                badge: 'Módulo 2',
+                icon: 'Ruler',
+                color: 'from-blue-500/30 to-indigo-600/30',
+                shortTitle: 'Teorema de la Mediana',
+                title: 'Teorema de la Mediana del Trapecio (MN)',
+                latexFormula: '\\overline{MN}: \\text{Mediana} \\implies x = \\frac{a + b}{2}',
+                statement: 'En todo trapecio con bases paralelas BC (a) y AD (b), la mediana MN une los puntos medios de los lados laterales AB y CD.',
+                qa: 'a) Modifica la longitud de la base menor (a) y mayor (b).',
+                qb: 'b) Verifica que la mediana x es igual a la semisuma de las bases.'
+            },
+            {
+                id: 3,
+                type: 'diagonals',
+                badge: 'Módulo 3',
+                icon: 'Minimize2',
+                color: 'from-orange-500/30 to-red-600/30',
+                shortTitle: 'Puntos Medios de Diagonales',
+                title: 'Segmento que une Puntos Medios de Diagonales (PQ)',
+                latexFormula: '\\overline{PQ} \\parallel \\overline{AD} \\implies x = \\frac{b - a}{2}',
+                statement: 'Al trazar las diagonales AC y BD del trapecio, el segmento PQ une sus puntos medios y se mantiene siempre paralelo a las bases.',
+                qa: 'a) Observa los puntos medios P (en AC) y Q (en BD).',
+                qb: 'b) Comprueba que el segmento PQ (x) mide la semidiferencia (b - a)/2.'
+            },
+            {
+                id: 4,
+                type: 'bisector_adj',
+                badge: 'Módulo 4',
+                icon: 'Compass',
+                color: 'from-fuchsia-500/30 to-pink-600/30',
+                shortTitle: 'Bisectrices Consecutivas',
+                title: 'Propiedad 1: Ángulo entre Bisectrices Adyacentes',
+                latexFormula: 'x = \\frac{\\theta + \\phi}{2}',
+                statement: 'En todo cuadrilátero, el ángulo x formado por las bisectrices interiores de dos ángulos consecutivos (A y D) depende de los otros dos ángulos (θ y φ).',
+                qa: 'a) Arrastra libremente los vértices superiores B y C.',
+                qb: 'b) Comprueba que el ángulo x es la semisuma de θ y φ.'
+            },
+            {
+                id: 5,
+                type: 'bisector_opp',
+                badge: 'Módulo 5',
+                icon: 'Layers',
+                color: 'from-violet-500/30 to-purple-600/30',
+                shortTitle: 'Bisectrices Opuestas',
+                title: 'Propiedad 2: Ángulo entre Bisectrices Opuestas',
+                latexFormula: 'x = \\frac{\\theta - \\phi}{2}',
+                statement: 'En todo cuadrilátero, el menor ángulo x formado por las bisectrices interiores de dos ángulos opuestos (A y C) es igual a la semidiferencia de θ y φ.',
+                qa: 'a) Mueve los vértices B y C para variar los ángulos θ y φ.',
+                qb: 'b) Verifica en tiempo real la propiedad x = |θ - φ| / 2.'
+            }
+        ];
+
+        /* Fondo Animado de Símbolos Matemáticos */
+        const FloatingBg = React.memo(() => {
+            const items = useMemo(() => {
+                const symbols = [
+                    '\\overline{BC} \\parallel \\overline{AD}',
+                    '\\frac{a+b}{2}',
+                    '\\frac{b-a}{2}',
+                    '\\alpha + \\beta = 180^\\circ',
+                    '\\frac{\\theta+\\phi}{2}',
+                    '\\frac{\\theta-\\phi}{2}',
+                    '90^\\circ',
+                    '\\overline{MN}',
+                    '\\overline{PQ}',
+                    '✨',
+                    '📐'
+                ];
+                return Array.from({ length: 24 }).map((_, i) => {
+                    const sym = symbols[i % symbols.length];
+                    return {
+                        id: i,
+                        sym,
+                        isTex: sym.includes('\\') || sym.includes('^'),
+                        left: `${(i * 19) % 96}%`,
+                        duration: `${12 + (i % 10) * 1.4}s`,
+                        delay: `-${(i * 1.7) % 18}s`,
+                        size: `${1.05 + (i % 4) * 0.45}rem`,
+                        opacity: 0.1 + (i % 3) * 0.07
+                    };
+                });
+            }, []);
+
+            return (
+                <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
+                    {items.map((it) => (
+                        <div
+                            key={it.id}
+                            className="absolute text-white font-black animate-floatUp select-none drop-shadow-lg"
+                            style={{
+                                left: it.left,
+                                bottom: '-15%',
+                                fontSize: it.size,
+                                opacity: it.opacity,
+                                animationDuration: it.duration,
+                                animationDelay: it.delay
+                            }}
+                        >
+                            {it.isTex ? <Latex math={it.sym} /> : it.sym}
+                        </div>
+                    ))}
+                </div>
+            );
+        });
+
+        /* Robot Asistente Animado */
+        const RobotAssistant = ({ isDragging, activeIdx }) => {
+            const containerAnim = isDragging ? 'animate-robotJump' : 'animate-robotFloat';
+            const armLAnim = isDragging ? 'rotate-[145deg] animate-pulse' : 'animate-robotTalkArmL';
+            const armRAnim = isDragging ? '-rotate-[145deg] animate-pulse' : 'animate-robotTalkArmR';
+
+            return (
+                <div className={`relative flex flex-col items-center drop-shadow-lg select-none ${containerAnim}`}>
+                    <div className="relative z-0 flex flex-col items-center translate-y-1">
+                        <div className={`w-4 h-4 rounded-full shadow-[0_0_12px_currentColor] z-10 transition-colors duration-300 ${isDragging ? 'text-emerald-400 bg-emerald-400' : 'text-yellow-400 bg-yellow-400 animate-pulse'}`}></div>
+                        <div className="w-1.5 h-4 bg-slate-400"></div>
+                    </div>
+                    <div className="relative z-10 w-16 h-16 sm:w-20 sm:h-20 bg-gradient-to-br from-slate-100 to-slate-300 rounded-[1.5rem] border-[4px] border-slate-400 shadow-xl flex flex-col items-center justify-center p-2">
+                        <div className="w-full h-full bg-slate-800 rounded-xl flex flex-col items-center justify-center p-1.5 shadow-inner border-2 border-slate-600">
+                            {isDragging ? (
+                                <div className="w-full flex justify-between px-1.5">
+                                    <div className="w-3.5 h-2 bg-emerald-400 rounded-t-full mt-1"></div>
+                                    <div className="w-3.5 h-2 bg-emerald-400 rounded-t-full mt-1"></div>
+                                </div>
+                            ) : (
+                                <div className="w-full flex justify-between px-1.5">
+                                    <div className="w-3 h-3 bg-cyan-400 rounded-full animate-pulse"></div>
+                                    <div className="w-3 h-3 bg-cyan-400 rounded-full animate-pulse"></div>
+                                </div>
+                            )}
+                            {isDragging ? (
+                                <div className="w-6 h-3.5 bg-rose-400 rounded-b-full mt-1.5"></div>
+                            ) : (
+                                <div className="w-5 h-1.5 bg-amber-400 rounded-full mt-2"></div>
+                            )}
+                        </div>
+                    </div>
+                    <div className={`absolute top-1/2 -left-2.5 w-3.5 h-5 bg-slate-300 border-[3px] border-slate-400 rounded-full z-0 origin-top ${armLAnim}`}></div>
+                    <div className={`absolute top-1/2 -right-2.5 w-3.5 h-5 bg-slate-300 border-[3px] border-slate-400 rounded-full z-0 origin-top ${armRAnim}`}></div>
+                </div>
+            );
+        };
+
+        function App() {
+            const [showCover, setShowCover] = useState(true);
+            const [activeIdx, setActiveIdx] = useState(0);
+            const [muted, setMuted] = useState(false);
+            const [showAuxLines, setShowAuxLines] = useState(true);
+            const [dragState, setDragState] = useState(null);
+
+            const svgRef = useRef(null);
+
+            // Estados Módulo 1, 2 y 3 (Trapecio ABCD)
+            const [trapMode, setTrapMode] = useState('isosceles');
+            const [yTop, setYTop] = useState(-95);
+            const [yBot, setYBot] = useState(125);
+            const [xA, setXA] = useState(-185);
+            const [xD, setXD] = useState(185);
+            const [xB, setXB] = useState(-95);
+            const [xC, setXC] = useState(95);
+
+            // Estados Módulo 4 (Bisectrices Consecutivas)
+            const [p4B, setP4B] = useState({ x: -135, y: -95 });
+            const [p4C, setP4C] = useState({ x: 95, y: -125 });
+
+            // Estados Módulo 5 (Bisectrices Opuestas)
+            const [p5B, setP5B] = useState({ x: -120, y: -55 });
+            const [p5C, setP5C] = useState({ x: -15, y: -135 });
+
+            const current = THEOREMS[activeIdx];
+
+            const handleToggleMute = () => {
+                AudioController.init();
+                setMuted(AudioController.toggleMute());
+            };
+
+            const enterModule = (idx) => {
+                AudioController.init();
+                AudioController.play('swoosh');
+                setActiveIdx(idx);
+                setShowCover(false);
+            };
+
+            const selectTrapMode = (mode) => {
+                AudioController.init();
+                AudioController.play('pop');
+                setTrapMode(mode);
+                if (mode === 'isosceles') {
+                    setXA(-185); setXD(185);
+                    setXB(-95); setXC(95);
+                } else if (mode === 'escaleno') {
+                    setXA(-195); setXD(185);
+                    setXB(-60); setXC(105);
+                } else if (mode === 'rectangulo') {
+                    setXA(-165); setXB(-165);
+                    setXC(45); setXD(185);
+                }
+            };
+
+            const resetCurrent = () => {
+                AudioController.init();
+                AudioController.play('pop-reverse');
+                setYTop(-95); setYBot(125);
+                if (current.type === 'classification' && trapMode === 'rectangulo') {
+                    setXA(-165); setXB(-165); setXC(45); setXD(185);
+                } else if (current.type === 'classification' && trapMode === 'escaleno') {
+                    setXA(-195); setXD(185); setXB(-60); setXC(105);
+                } else {
+                    setXA(-185); setXD(185); setXB(-95); setXC(95);
+                }
+                setP4B({ x: -135, y: -95 });
+                setP4C({ x: 95, y: -125 });
+                setP5B({ x: -120, y: -55 });
+                setP5C({ x: -15, y: -135 });
+            };
+
+            const handlePointerDown = (nodeId) => (e) => {
+                e.stopPropagation();
+                e.target.setPointerCapture(e.pointerId);
+                setDragState(nodeId);
+                AudioController.init();
+                AudioController.play('pop');
+            };
+
+            const handlePointerMove = (e) => {
+                if (!dragState || !svgRef.current) return;
+                const rect = svgRef.current.getBoundingClientRect();
+                const svgX = Math.round(((e.clientX - rect.left) / rect.width) * 520 - 260);
+                const svgY = Math.round(((e.clientY - rect.top) / rect.height) * 520 - 260);
+
+                if (dragState === 'B' || dragState === 'C' || dragState === 'A' || dragState === 'D') {
+                    const isIso = current.type === 'classification' && trapMode === 'isosceles';
+                    const isRect = current.type === 'classification' && trapMode === 'rectangulo';
+
+                    if (dragState === 'B') {
+                        const newY = Math.max(-185, Math.min(yBot - 75, svgY));
+                        setYTop(newY);
+                        if (isIso) {
+                            const half = Math.max(35, Math.min(190, Math.abs(svgX)));
+                            setXB(-half); setXC(half);
+                        } else if (isRect) {
+                            const nx = Math.max(-215, Math.min(xC - 50, svgX));
+                            setXB(nx); setXA(nx);
+                        } else {
+                            setXB(Math.max(-215, Math.min(xC - 50, svgX)));
+                        }
+                    }
+
+                    if (dragState === 'C') {
+                        const newY = Math.max(-185, Math.min(yBot - 75, svgY));
+                        setYTop(newY);
+                        if (isIso) {
+                            const half = Math.max(35, Math.min(190, Math.abs(svgX)));
+                            setXB(-half); setXC(half);
+                        } else {
+                            setXC(Math.max(xB + 50, Math.min(215, svgX)));
+                        }
+                    }
+
+                    if (dragState === 'A') {
+                        if (isIso) {
+                            const half = Math.max(70, Math.min(220, Math.abs(svgX)));
+                            setXA(-half); setXD(half);
+                        } else if (isRect) {
+                            const nx = Math.max(-215, Math.min(xC - 50, svgX));
+                            setXA(nx); setXB(nx);
+                        } else {
+                            setXA(Math.max(-220, Math.min(xD - 90, svgX)));
+                        }
+                    }
+
+                    if (dragState === 'D') {
+                        if (isIso) {
+                            const half = Math.max(70, Math.min(220, Math.abs(svgX)));
+                            setXA(-half); setXD(half);
+                        } else {
+                            setXD(Math.max(xA + 90, Math.min(220, svgX)));
+                        }
+                    }
+                }
+
+                if (dragState === 'P4B') {
+                    setP4B({
+                        x: Math.max(-215, Math.min(-20, svgX)),
+                        y: Math.max(-195, Math.min(35, svgY))
+                    });
+                }
+                if (dragState === 'P4C') {
+                    setP4C({
+                        x: Math.max(20, Math.min(215, svgX)),
+                        y: Math.max(-195, Math.min(35, svgY))
+                    });
+                }
+
+                if (dragState === 'P5B') {
+                    setP5B({
+                        x: Math.max(-210, Math.min(-55, svgX)),
+                        y: Math.max(-165, Math.min(40, svgY))
+                    });
+                }
+                if (dragState === 'P5C') {
+                    setP5C({
+                        x: Math.max(-40, Math.min(130, svgX)),
+                        y: Math.max(-195, Math.min(-35, svgY))
+                    });
+                }
+            };
+
+            const handlePointerUp = () => {
+                if (dragState) setDragState(null);
+            };
+
+            const CircleNode = ({ cx, cy, id, color, label, labelOffset = -22 }) => (
+                <g className="cursor-grab" onPointerDown={handlePointerDown(id)}>
+                    <circle cx={cx} cy={cy} r="28" fill="transparent" />
+                    <circle
+                        cx={cx}
+                        cy={cy}
+                        r="13"
+                        className="draggable-node"
+                        fill="#ffffff"
+                        stroke={color}
+                        strokeWidth="4.5"
+                        style={{ filter: 'drop-shadow(0 3px 6px rgba(15, 23, 42, 0.25))' }}
+                    />
+                    <circle cx={cx} cy={cy} r="5" fill={color} className="pointer-events-none" />
+                    {label && (
+                        <g transform={`translate(${cx}, ${cy + labelOffset})`} className="pointer-events-none">
+                            <rect x="-18" y="-12" width="36" height="22" rx="6" fill="#1e293b" />
+                            <text x="0" y="4" fill="#ffffff" fontSize="13" fontWeight="900" textAnchor="middle">
+                                {label}
+                            </text>
+                        </g>
+                    )}
+                </g>
+            );
+
+            const SVGLabel = ({ x, y, text, color, bgColor = "#ffffff", width = 98 }) => (
+                <g transform={`translate(${x},${y})`} className="pointer-events-none">
+                    <rect
+                        x={-width / 2}
+                        y="-15"
+                        width={width}
+                        height="30"
+                        rx="10"
+                        fill={bgColor}
+                        stroke={color}
+                        strokeWidth="2.5"
+                        style={{ filter: 'drop-shadow(0 3px 6px rgba(0,0,0,0.12))' }}
+                    />
+                    <text
+                        x="0"
+                        y="5"
+                        fill={color}
+                        fontSize="13.5"
+                        textAnchor="middle"
+                        fontWeight="800"
+                    >
+                        {text}
+                    </text>
+                </g>
+            );
+
+            /* Renderizado del Lienzo Geométrico */
+            const renderBoardGeometry = () => {
+                const A = { x: xA, y: yBot };
+                const D = { x: xD, y: yBot };
+                const B = { x: xB, y: yTop };
+                const C = { x: xC, y: yTop };
+
+                const baseA = Math.round((xC - xB) / 2);
+                const baseB = Math.round((xD - xA) / 2);
+
+                /* MÓDULO 1: CLASIFICACIÓN DE TRAPECIOS */
+                if (current.type === 'classification') {
+                    const angA = Math.round(GeoUtils.interiorAngleDeg(B, A, D));
+                    const angB = 180 - angA;
+                    const angD = Math.round(GeoUtils.interiorAngleDeg(C, D, A));
+                    const angC = 180 - angD;
+
+                    const sideL1 = Math.round(GeoUtils.dist(A, B) / 2);
+                    const sideL2 = trapMode === 'isosceles' ? sideL1 : Math.round(GeoUtils.dist(C, D) / 2);
+                    const midAB = GeoUtils.mid(A, B);
+                    const midCD = GeoUtils.mid(C, D);
+
+                    const ticksAB = GeoUtils.tickMark(A, B, 1, 9);
+                    const ticksCD = GeoUtils.tickMark(C, D, trapMode === 'isosceles' ? 1 : 2, 9);
+
+                    return (
+                        <g>
+                            {showAuxLines && (
+                                <g>
+                                    <line x1="-245" y1={yTop} x2="245" y2={yTop} stroke="#3b82f6" strokeWidth="2" strokeDasharray="7,6" opacity="0.55" />
+                                    <line x1="-245" y1={yBot} x2="245" y2={yBot} stroke="#3b82f6" strokeWidth="2" strokeDasharray="7,6" opacity="0.55" />
+                                </g>
+                            )}
+
+                            <polygon points={`${A.x},${A.y} ${B.x},${B.y} ${C.x},${C.y} ${D.x},${D.y}`} fill="rgba(59, 130, 246, 0.10)" />
+
+                            {trapMode === 'rectangulo' ? (
+                                <g>
+                                    <rect x={A.x} y={A.y - 22} width="22" height="22" fill="#fef08a" stroke="#ca8a04" strokeWidth="2.5" />
+                                    <circle cx={A.x + 11} cy={A.y - 11} r="2.5" fill="#ca8a04" />
+                                    <rect x={B.x} y={B.y} width="22" height="22" fill="#fef08a" stroke="#ca8a04" strokeWidth="2.5" />
+                                    <circle cx={B.x + 11} cy={B.y + 11} r="2.5" fill="#ca8a04" />
+                                </g>
+                            ) : (
+                                <g>
+                                    <path d={GeoUtils.wedgePath(A, B, D, 36)} fill="rgba(16, 185, 129, 0.25)" stroke="#059669" strokeWidth="2.5" />
+                                    <path d={GeoUtils.wedgePath(B, A, C, 32)} fill="rgba(245, 158, 11, 0.28)" stroke="#d97706" strokeWidth="2.5" />
+                                </g>
+                            )}
+
+                            <path d={GeoUtils.wedgePath(D, A, C, 36)} fill="rgba(16, 185, 129, 0.25)" stroke="#059669" strokeWidth="2.5" />
+                            <path d={GeoUtils.wedgePath(C, B, D, 32)} fill="rgba(245, 158, 11, 0.28)" stroke="#d97706" strokeWidth="2.5" />
+
+                            <line x1={B.x} y1={B.y} x2={C.x} y2={C.y} stroke="#1d4ed8" strokeWidth="6" strokeLinecap="round" />
+                            <line x1={A.x} y1={A.y} x2={D.x} y2={D.y} stroke="#1d4ed8" strokeWidth="6" strokeLinecap="round" />
+
+                            <line x1={A.x} y1={A.y} x2={B.x} y2={B.y} stroke="#db2777" strokeWidth="5.5" strokeLinecap="round" />
+                            <line x1={C.x} y1={C.y} x2={D.x} y2={D.y} stroke="#db2777" strokeWidth="5.5" strokeLinecap="round" />
+
+                            {ticksAB.map((t, i) => (
+                                <line key={`ab-${i}`} x1={t.x1} y1={t.y1} x2={t.x2} y2={t.y2} stroke="#0f172a" strokeWidth="3.5" strokeLinecap="round" />
+                            ))}
+                            {ticksCD.map((t, i) => (
+                                <line key={`cd-${i}`} x1={t.x1} y1={t.y1} x2={t.x2} y2={t.y2} stroke="#0f172a" strokeWidth="3.5" strokeLinecap="round" />
+                            ))}
+
+                            {trapMode !== 'rectangulo' && (
+                                <>
+                                    <text x={A.x + 44} y={A.y - 12} fill="#047857" fontSize="14" fontWeight="900">{`α=${angA}°`}</text>
+                                    <text x={B.x + 28} y={B.y + 36} fill="#b45309" fontSize="14" fontWeight="900">{`β=${angB}°`}</text>
+                                </>
+                            )}
+                            <text x={D.x - 46} y={D.y - 12} fill="#047857" fontSize="14" fontWeight="900" textAnchor="end">{`α=${angD}°`}</text>
+                            <text x={C.x - 28} y={C.y + 36} fill="#b45309" fontSize="14" fontWeight="900" textAnchor="end">{`β=${angC}°`}</text>
+
+                            <SVGLabel x={midAB.x - 44} y={midAB.y} text={trapMode === 'isosceles' ? `ℓ = ${sideL1}` : `a = ${sideL1}`} color="#be185d" bgColor="#fdf2f8" width={82} />
+                            <SVGLabel x={midCD.x + 44} y={midCD.y} text={trapMode === 'isosceles' ? `ℓ = ${sideL2}` : `b = ${sideL2}`} color="#be185d" bgColor="#fdf2f8" width={82} />
+
+                            <SVGLabel x={(B.x + C.x) / 2} y={yTop - 30} text={`Base Menor = ${baseA}`} color="#1d4ed8" bgColor="#eff6ff" width={145} />
+                            <SVGLabel x={(A.x + D.x) / 2} y={yBot + 36} text={`Base Mayor = ${baseB}`} color="#1d4ed8" bgColor="#eff6ff" width={145} />
+
+                            <CircleNode cx={A.x} cy={A.y} id="A" color="#1d4ed8" label="A" labelOffset={28} />
+                            <CircleNode cx={D.x} cy={D.y} id="D" color="#1d4ed8" label="D" labelOffset={28} />
+                            <CircleNode cx={B.x} cy={B.y} id="B" color="#db2777" label="B" labelOffset={-24} />
+                            <CircleNode cx={C.x} cy={C.y} id="C" color="#db2777" label="C" labelOffset={-24} />
+                        </g>
+                    );
+                }
+
+                /* MÓDULO 2: MEDIANA MN */
+                if (current.type === 'median') {
+                    const M = GeoUtils.mid(A, B);
+                    const N = GeoUtils.mid(C, D);
+                    const medianVal = (baseA + baseB) / 2;
+
+                    const tAM = GeoUtils.tickMark(A, M, 1, 8);
+                    const tMB = GeoUtils.tickMark(M, B, 1, 8);
+                    const tCN = GeoUtils.tickMark(C, N, 2, 8);
+                    const tND = GeoUtils.tickMark(N, D, 2, 8);
+
+                    return (
+                        <g>
+                            {showAuxLines && (
+                                <g opacity="0.55">
+                                    <line x1="-245" y1={yTop} x2="245" y2={yTop} stroke="#1d4ed8" strokeWidth="2" strokeDasharray="6,6" />
+                                    <line x1="-245" y1={M.y} x2="245" y2={N.y} stroke="#059669" strokeWidth="2" strokeDasharray="6,6" />
+                                    <line x1="-245" y1={yBot} x2="245" y2={yBot} stroke="#1d4ed8" strokeWidth="2" strokeDasharray="6,6" />
+                                </g>
+                            )}
+
+                            <polygon points={`${A.x},${A.y} ${B.x},${B.y} ${C.x},${C.y} ${D.x},${D.y}`} fill="rgba(16, 185, 129, 0.10)" />
+
+                            <line x1={A.x} y1={A.y} x2={B.x} y2={B.y} stroke="#475569" strokeWidth="4.5" />
+                            <line x1={C.x} y1={C.y} x2={D.x} y2={D.y} stroke="#475569" strokeWidth="4.5" />
+
+                            {[...tAM, ...tMB].map((t, i) => (
+                                <line key={`l-${i}`} x1={t.x1} y1={t.y1} x2={t.x2} y2={t.y2} stroke="#db2777" strokeWidth="3.5" strokeLinecap="round" />
+                            ))}
+                            {[...tCN, ...tND].map((t, i) => (
+                                <line key={`m-${i}`} x1={t.x1} y1={t.y1} x2={t.x2} y2={t.y2} stroke="#d97706" strokeWidth="3.5" strokeLinecap="round" />
+                            ))}
+
+                            <line x1={B.x} y1={B.y} x2={C.x} y2={C.y} stroke="#1d4ed8" strokeWidth="6" strokeLinecap="round" />
+                            <line x1={A.x} y1={A.y} x2={D.x} y2={D.y} stroke="#1d4ed8" strokeWidth="6" strokeLinecap="round" />
+
+                            <line x1={M.x} y1={M.y} x2={N.x} y2={N.y} stroke="#059669" strokeWidth="7" strokeLinecap="round" />
+
+                            <circle cx={M.x} cy={M.y} r="7.5" fill="#059669" stroke="#ffffff" strokeWidth="2.5" />
+                            <circle cx={N.x} cy={N.y} r="7.5" fill="#059669" stroke="#ffffff" strokeWidth="2.5" />
+                            <text x={M.x - 18} y={M.y + 5} fill="#065f46" fontSize="16" fontWeight="900" textAnchor="end">M</text>
+                            <text x={N.x + 18} y={N.y + 5} fill="#065f46" fontSize="16" fontWeight="900">N</text>
+
+                            <SVGLabel x={(B.x + C.x) / 2} y={yTop - 28} text={`a = ${baseA}`} color="#1d4ed8" bgColor="#eff6ff" width={90} />
+                            <SVGLabel x={(M.x + N.x) / 2} y={M.y} text={`Mediana x = ${medianVal}`} color="#047857" bgColor="#ecfdf5" width={160} />
+                            <SVGLabel x={(A.x + D.x) / 2} y={yBot + 34} text={`b = ${baseB}`} color="#1d4ed8" bgColor="#eff6ff" width={90} />
+
+                            <CircleNode cx={A.x} cy={A.y} id="A" color="#1d4ed8" label="A" labelOffset={28} />
+                            <CircleNode cx={D.x} cy={D.y} id="D" color="#1d4ed8" label="D" labelOffset={28} />
+                            <CircleNode cx={B.x} cy={B.y} id="B" color="#1d4ed8" label="B" labelOffset={-24} />
+                            <CircleNode cx={C.x} cy={C.y} id="C" color="#1d4ed8" label="C" labelOffset={-24} />
+                        </g>
+                    );
+                }
+
+                /* MÓDULO 3: PUNTOS MEDIOS DE DIAGONALES PQ */
+                if (current.type === 'diagonals') {
+                    const P = GeoUtils.mid(A, C);
+                    const Q = GeoUtils.mid(B, D);
+                    const pqVal = (baseB - baseA) / 2;
+
+                    return (
+                        <g>
+                            <polygon points={`${A.x},${A.y} ${B.x},${B.y} ${C.x},${C.y} ${D.x},${D.y}`} fill="rgba(245, 158, 11, 0.09)" />
+
+                            <line x1={A.x} y1={A.y} x2={B.x} y2={B.y} stroke="#64748b" strokeWidth="4" />
+                            <line x1={C.x} y1={C.y} x2={D.x} y2={D.y} stroke="#64748b" strokeWidth="4" />
+
+                            <line x1={A.x} y1={A.y} x2={C.x} y2={C.y} stroke="#7c3aed" strokeWidth="3.5" strokeDasharray={showAuxLines ? "none" : "6,5"} />
+                            <line x1={B.x} y1={B.y} x2={D.x} y2={D.y} stroke="#7c3aed" strokeWidth="3.5" strokeDasharray={showAuxLines ? "none" : "6,5"} />
+
+                            <line x1={B.x} y1={B.y} x2={C.x} y2={C.y} stroke="#1d4ed8" strokeWidth="6" strokeLinecap="round" />
+                            <line x1={A.x} y1={A.y} x2={D.x} y2={D.y} stroke="#1d4ed8" strokeWidth="6" strokeLinecap="round" />
+
+                            <line x1={P.x} y1={P.y} x2={Q.x} y2={Q.y} stroke="#ea580c" strokeWidth="7" strokeLinecap="round" />
+
+                            <circle cx={P.x} cy={P.y} r="7" fill="#ea580c" stroke="#ffffff" strokeWidth="2.5" />
+                            <circle cx={Q.x} cy={Q.y} r="7" fill="#ea580c" stroke="#ffffff" strokeWidth="2.5" />
+                            <text x={P.x - 14} y={P.y + 5} fill="#9a3412" fontSize="16" fontWeight="900" textAnchor="end">P</text>
+                            <text x={Q.x + 14} y={Q.y + 5} fill="#9a3412" fontSize="16" fontWeight="900">Q</text>
+
+                            <SVGLabel x={(B.x + C.x) / 2} y={yTop - 28} text={`a = ${baseA}`} color="#1d4ed8" bgColor="#eff6ff" width={90} />
+                            <SVGLabel x={(P.x + Q.x) / 2} y={P.y + 34} text={`PQ (x) = ${pqVal}`} color="#c2410c" bgColor="#fff7ed" width={136} />
+                            <SVGLabel x={(A.x + D.x) / 2} y={yBot + 34} text={`b = ${baseB}`} color="#1d4ed8" bgColor="#eff6ff" width={90} />
+
+                            <CircleNode cx={A.x} cy={A.y} id="A" color="#1d4ed8" label="A" labelOffset={28} />
+                            <CircleNode cx={D.x} cy={D.y} id="D" color="#1d4ed8" label="D" labelOffset={28} />
+                            <CircleNode cx={B.x} cy={B.y} id="B" color="#db2777" label="B" labelOffset={-24} />
+                            <CircleNode cx={C.x} cy={C.y} id="C" color="#db2777" label="C" labelOffset={-24} />
+                        </g>
+                    );
+                }
+
+                /* MÓDULO 4: BISECTRICES CONSECUTIVAS */
+                if (current.type === 'bisector_adj') {
+                    const pA = { x: -190, y: 135 };
+                    const pD = { x: 190, y: 135 };
+                    const pB = p4B;
+                    const pC = p4C;
+
+                    const theta = Math.round(GeoUtils.interiorAngleDeg(pA, pB, pC));
+                    const phi = Math.round(GeoUtils.interiorAngleDeg(pB, pC, pD));
+                    const alphaHalf = Math.round(GeoUtils.interiorAngleDeg(pB, pA, pD) / 2);
+                    const betaHalf = Math.round(GeoUtils.interiorAngleDeg(pC, pD, pA) / 2);
+                    const xVal = ((theta + phi) / 2).toFixed(1).replace('.0', '');
+
+                    const dirA = GeoUtils.bisectorDir(pB, pA, pD);
+                    const dirD = GeoUtils.bisectorDir(pC, pD, pA);
+                    const P = GeoUtils.intersectRays(pA, dirA, pD, dirD) || { x: 0, y: 20 };
+
+                    return (
+                        <g>
+                            <polygon points={`${pA.x},${pA.y} ${pB.x},${pB.y} ${pC.x},${pC.y} ${pD.x},${pD.y}`} fill="rgba(147, 51, 234, 0.08)" />
+
+                            <path d={GeoUtils.wedgePath(pB, pA, pC, 34)} fill="rgba(37, 99, 235, 0.22)" stroke="#1d4ed8" strokeWidth="2.5" />
+                            <path d={GeoUtils.wedgePath(pC, pB, pD, 34)} fill="rgba(37, 99, 235, 0.22)" stroke="#1d4ed8" strokeWidth="2.5" />
+
+                            <path d={GeoUtils.arcOnlyPath(pA, pB, P, 34)} fill="none" stroke="#db2777" strokeWidth="2.5" />
+                            <path d={GeoUtils.arcOnlyPath(pA, P, pD, 40)} fill="none" stroke="#db2777" strokeWidth="2.5" />
+                            <path d={GeoUtils.arcOnlyPath(pD, pC, P, 34)} fill="none" stroke="#db2777" strokeWidth="2.5" />
+                            <path d={GeoUtils.arcOnlyPath(pD, P, pA, 40)} fill="none" stroke="#db2777" strokeWidth="2.5" />
+
+                            <path d={GeoUtils.wedgePath(P, pA, pD, 36)} fill="rgba(234, 88, 12, 0.30)" stroke="#ea580c" strokeWidth="3" />
+
+                            <polygon points={`${pA.x},${pA.y} ${pB.x},${pB.y} ${pC.x},${pC.y} ${pD.x},${pD.y}`} fill="none" stroke="#7e22ce" strokeWidth="5" strokeLinejoin="round" />
+
+                            <line x1={pA.x} y1={pA.y} x2={P.x} y2={P.y} stroke="#ea580c" strokeWidth="4.5" strokeLinecap="round" />
+                            <line x1={pD.x} y1={pD.y} x2={P.x} y2={P.y} stroke="#ea580c" strokeWidth="4.5" strokeLinecap="round" />
+
+                            <circle cx={P.x} cy={P.y} r="6.5" fill="#ea580c" stroke="#fff" strokeWidth="2" />
+                            <circle cx={pA.x} cy={pA.y} r="6.5" fill="#0f172a" />
+                            <circle cx={pD.x} cy={pD.y} r="6.5" fill="#0f172a" />
+
+                            <text x={pA.x - 18} y={pA.y + 8} fill="#0f172a" fontSize="16" fontWeight="900">A</text>
+                            <text x={pD.x + 18} y={pD.y + 8} fill="#0f172a" fontSize="16" fontWeight="900">D</text>
+
+                            <text x={pA.x + 48} y={pA.y - 8} fill="#be185d" fontSize="13.5" fontWeight="900">{`α=${alphaHalf}°`}</text>
+                            <text x={pD.x - 48} y={pD.y - 8} fill="#be185d" fontSize="13.5" fontWeight="900" textAnchor="end">{`β=${betaHalf}°`}</text>
+
+                            <SVGLabel x={pB.x + 36} y={pB.y + 38} text={`θ = ${theta}°`} color="#1d4ed8" bgColor="#eff6ff" width={86} />
+                            <SVGLabel x={pC.x - 36} y={pC.y + 38} text={`φ = ${phi}°`} color="#1d4ed8" bgColor="#eff6ff" width={86} />
+                            <SVGLabel x={P.x} y={P.y + 48} text={`x = ${xVal}°`} color="#c2410c" bgColor="#fff7ed" width={100} />
+
+                            <CircleNode cx={pB.x} cy={pB.y} id="P4B" color="#1d4ed8" label="B" labelOffset={-24} />
+                            <CircleNode cx={pC.x} cy={pC.y} id="P4C" color="#1d4ed8" label="C" labelOffset={-24} />
+                        </g>
+                    );
+                }
+
+                /* MÓDULO 5: BISECTRICES OPUESTAS */
+                if (current.type === 'bisector_opp') {
+                    const pA = { x: -195, y: 135 };
+                    const pD = { x: 185, y: 135 };
+                    const pB = p5B;
+                    const pC = p5C;
+
+                    const theta = Math.round(GeoUtils.interiorAngleDeg(pA, pB, pC));
+                    const phi = Math.round(GeoUtils.interiorAngleDeg(pC, pD, pA));
+                    const xVal = (Math.abs(theta - phi) / 2).toFixed(1).replace('.0', '');
+
+                    const dirA = GeoUtils.bisectorDir(pB, pA, pD);
+                    const dirC = GeoUtils.bisectorDir(pB, pC, pD);
+                    const I = GeoUtils.intersectRays(pA, dirA, pC, dirC) || { x: -20, y: 20 };
+                    const extA = { x: I.x + dirA.x * 55, y: I.y + dirA.y * 55 };
+
+                    return (
+                        <g>
+                            <polygon points={`${pA.x},${pA.y} ${pB.x},${pB.y} ${pC.x},${pC.y} ${pD.x},${pD.y}`} fill="rgba(225, 29, 72, 0.08)" />
+
+                            <path d={GeoUtils.wedgePath(pB, pA, pC, 32)} fill="rgba(37, 99, 235, 0.22)" stroke="#1d4ed8" strokeWidth="2.5" />
+                            <path d={GeoUtils.wedgePath(pD, pC, pA, 34)} fill="rgba(37, 99, 235, 0.22)" stroke="#1d4ed8" strokeWidth="2.5" />
+
+                            <path d={GeoUtils.arcOnlyPath(pA, pB, I, 34)} fill="none" stroke="#db2777" strokeWidth="2.5" />
+                            <path d={GeoUtils.arcOnlyPath(pA, I, pD, 40)} fill="none" stroke="#db2777" strokeWidth="2.5" />
+                            <path d={GeoUtils.arcOnlyPath(pC, pB, I, 32)} fill="none" stroke="#db2777" strokeWidth="2.5" />
+                            <path d={GeoUtils.arcOnlyPath(pC, I, pD, 38)} fill="none" stroke="#db2777" strokeWidth="2.5" />
+
+                            <path d={GeoUtils.wedgePath(I, pC, extA, 32)} fill="rgba(234, 88, 12, 0.32)" stroke="#ea580c" strokeWidth="3" />
+
+                            <polygon points={`${pA.x},${pA.y} ${pB.x},${pB.y} ${pC.x},${pC.y} ${pD.x},${pD.y}`} fill="none" stroke="#be123c" strokeWidth="5" strokeLinejoin="round" />
+
+                            <line x1={pA.x} y1={pA.y} x2={extA.x} y2={extA.y} stroke="#ea580c" strokeWidth="4.5" strokeLinecap="round" />
+                            <line x1={pC.x} y1={pC.y} x2={I.x} y2={I.y} stroke="#ea580c" strokeWidth="4.5" strokeLinecap="round" />
+
+                            <circle cx={I.x} cy={I.y} r="6.5" fill="#ea580c" stroke="#fff" strokeWidth="2" />
+                            <circle cx={pA.x} cy={pA.y} r="6.5" fill="#0f172a" />
+                            <circle cx={pD.x} cy={pD.y} r="6.5" fill="#0f172a" />
+
+                            <text x={pA.x - 18} y={pA.y + 8} fill="#0f172a" fontSize="16" fontWeight="900">A</text>
+                            <text x={pD.x + 18} y={pD.y + 8} fill="#0f172a" fontSize="16" fontWeight="900">D</text>
+                            <text x={pA.x + 48} y={pA.y - 10} fill="#be185d" fontSize="14" fontWeight="900">α | α</text>
+                            <text x={pC.x} y={pC.y + 52} fill="#be185d" fontSize="14" fontWeight="900" textAnchor="middle">β | β</text>
+
+                            <SVGLabel x={pB.x + 42} y={pB.y + 20} text={`θ = ${theta}°`} color="#1d4ed8" bgColor="#eff6ff" width={86} />
+                            <SVGLabel x={pD.x - 62} y={pD.y - 22} text={`φ = ${phi}°`} color="#1d4ed8" bgColor="#eff6ff" width={86} />
+                            <SVGLabel x={I.x + 58} y={I.y - 8} text={`x = ${xVal}°`} color="#c2410c" bgColor="#fff7ed" width={100} />
+
+                            <CircleNode cx={pB.x} cy={pB.y} id="P5B" color="#1d4ed8" label="B" labelOffset={-24} />
+                            <CircleNode cx={pC.x} cy={pC.y} id="P5C" color="#1d4ed8" label="C" labelOffset={-24} />
+                        </g>
+                    );
+                }
+            };
+
+            /* Cálculos Dinámicos para el Panel Derecho y Explicación del Robot */
+            const getDynamicData = () => {
+                const baseA = Math.round((xC - xB) / 2);
+                const baseB = Math.round((xD - xA) / 2);
+                const A = { x: xA, y: yBot };
+                const D = { x: xD, y: yBot };
+                const B = { x: xB, y: yTop };
+
+                if (current.type === 'classification') {
+                    const angA = Math.round(GeoUtils.interiorAngleDeg(B, A, D));
+                    const angB = 180 - angA;
+                    return {
+                        liveFormula: `\\alpha + \\beta = ${angA}^\\circ + ${angB}^\\circ = 180^\\circ`,
+                        highlightResult: `\\alpha + \\beta = \\color{#78350f}180^\\circ`,
+                        robotMsg: (
+                            <p>
+                                ¡Explora el <span className="text-white font-black bg-[#4f46e5] px-3 py-0.5 rounded-xl shadow-[0_3px_0_#3730a3] mx-1">Trapecio {trapMode.toUpperCase()}</span>! Al ser <Latex math="\overline{BC} \parallel \overline{AD}" />, los ángulos conjugados suman siempre <span className="text-white font-black bg-emerald-500 px-3 py-0.5 rounded-xl shadow-[0_3px_0_#047857] mx-1"><Latex math={`${angA}^\\circ + ${angB}^\\circ = 180^\\circ`} /></span>.
+                            </p>
+                        )
+                    };
+                }
+
+                if (current.type === 'median') {
+                    const medianVal = (baseA + baseB) / 2;
+                    return {
+                        liveFormula: `x = \\frac{${baseA} + ${baseB}}{2} = \\frac{${baseA + baseB}}{2}`,
+                        highlightResult: `x = \\color{#78350f}${medianVal}\\text{ u}`,
+                        robotMsg: (
+                            <p>
+                                <strong>Demostración en vivo:</strong> La base menor mide <span className="text-white font-black bg-[#4f46e5] px-3 py-0.5 rounded-xl shadow-[0_3px_0_#3730a3] mx-1"><Latex math={`a = ${baseA}`} /></span> y la base mayor <span className="text-white font-black bg-[#4f46e5] px-3 py-0.5 rounded-xl shadow-[0_3px_0_#3730a3] mx-1"><Latex math={`b = ${baseB}`} /></span>. La mediana <Latex math="\overline{MN}" /> es la semisuma: <span className="text-white font-black bg-emerald-500 px-3 py-0.5 rounded-xl shadow-[0_3px_0_#047857] mx-1"><Latex math={`x = ${medianVal}`} /></span>.
+                            </p>
+                        )
+                    };
+                }
+
+                if (current.type === 'diagonals') {
+                    const pqVal = (baseB - baseA) / 2;
+                    return {
+                        liveFormula: `x = \\frac{${baseB} - ${baseA}}{2} = \\frac{${baseB - baseA}}{2}`,
+                        highlightResult: `x = \\color{#78350f}${pqVal}\\text{ u}`,
+                        robotMsg: (
+                            <p>
+                                <strong>Puntos medios de diagonales:</strong> Restamos la base mayor <span className="text-white font-black bg-[#4f46e5] px-3 py-0.5 rounded-xl shadow-[0_3px_0_#3730a3] mx-1"><Latex math={`b = ${baseB}`} /></span> menos la menor <span className="text-white font-black bg-[#4f46e5] px-3 py-0.5 rounded-xl shadow-[0_3px_0_#3730a3] mx-1"><Latex math={`a = ${baseA}`} /></span> y dividimos entre 2: <span className="text-white font-black bg-fuchsia-500 px-3 py-0.5 rounded-xl shadow-[0_3px_0_#a21caf] mx-1"><Latex math={`PQ = ${pqVal}`} /></span>.
+                            </p>
+                        )
+                    };
+                }
+
+                if (current.type === 'bisector_adj') {
+                    const pA = { x: -190, y: 135 };
+                    const pD = { x: 190, y: 135 };
+                    const theta = Math.round(GeoUtils.interiorAngleDeg(pA, p4B, p4C));
+                    const phi = Math.round(GeoUtils.interiorAngleDeg(p4B, p4C, pD));
+                    const xVal = ((theta + phi) / 2).toFixed(1).replace('.0', '');
+                    return {
+                        liveFormula: `x = \\frac{${theta}^\\circ + ${phi}^\\circ}{2} = \\frac{${theta + phi}^\\circ}{2}`,
+                        highlightResult: `x = \\color{#78350f}${xVal}^\\circ`,
+                        robotMsg: (
+                            <p>
+                                <strong>Bisectrices Consecutivas:</strong> Al mover B y C tenemos <span className="text-white font-black bg-[#4f46e5] px-3 py-0.5 rounded-xl shadow-[0_3px_0_#3730a3] mx-1"><Latex math={`\\theta = ${theta}^\\circ`} /></span> y <span className="text-white font-black bg-[#4f46e5] px-3 py-0.5 rounded-xl shadow-[0_3px_0_#3730a3] mx-1"><Latex math={`\\phi = ${phi}^\\circ`} /></span>. El ángulo en las bisectrices es <span className="text-white font-black bg-emerald-500 px-3 py-0.5 rounded-xl shadow-[0_3px_0_#047857] mx-1"><Latex math={`x = ${xVal}^\\circ`} /></span>.
+                            </p>
+                        )
+                    };
+                }
+
+                const pA = { x: -195, y: 135 };
+                const pD = { x: 185, y: 135 };
+                const theta = Math.round(GeoUtils.interiorAngleDeg(pA, p5B, p5C));
+                const phi = Math.round(GeoUtils.interiorAngleDeg(p5C, pD, pA));
+                const xVal = (Math.abs(theta - phi) / 2).toFixed(1).replace('.0', '');
+                return {
+                    liveFormula: `x = \\frac{|${theta}^\\circ - ${phi}^\\circ|}{2} = \\frac{${Math.abs(theta - phi)}^\\circ}{2}`,
+                    highlightResult: `x = \\color{#78350f}${xVal}^\\circ`,
+                    robotMsg: (
+                        <p>
+                            <strong>Bisectrices Opuestas:</strong> El menor ángulo entre las bisectrices de A y C es la semidiferencia entre <span className="text-white font-black bg-[#4f46e5] px-3 py-0.5 rounded-xl shadow-[0_3px_0_#3730a3] mx-1"><Latex math={`\\theta = ${theta}^\\circ`} /></span> y <span className="text-white font-black bg-[#4f46e5] px-3 py-0.5 rounded-xl shadow-[0_3px_0_#3730a3] mx-1"><Latex math={`\\phi = ${phi}^\\circ`} /></span>, resultando <span className="text-white font-black bg-fuchsia-500 px-3 py-0.5 rounded-xl shadow-[0_3px_0_#a21caf] mx-1"><Latex math={`x = ${xVal}^\\circ`} /></span>.
+                        </p>
+                    )
+                };
+            };
+
+            /* ==========================================
+               VISTA 1: PORTADA ESTILO TUPROFE20 LAB
+               ========================================== */
+            if (showCover) {
+                return (
+                    <div className="min-h-[100dvh] bg-[#0a0f1d] flex flex-col items-center justify-center p-4 sm:p-8 relative overflow-x-hidden select-none">
+                        {/* Luces Ambientales Difuminadas */}
+                        <div className="absolute top-[10%] left-1/4 -translate-x-1/2 w-[380px] h-[380px] sm:w-[600px] sm:h-[600px] bg-blue-600/30 blur-[100px] rounded-full pointer-events-none z-0 mix-blend-screen animate-pulse" style={{ animationDuration: '4s' }}></div>
+                        <div className="absolute bottom-[5%] right-[10%] w-[300px] h-[300px] sm:w-[500px] sm:h-[500px] bg-fuchsia-600/20 blur-[80px] rounded-full pointer-events-none z-0 mix-blend-screen animate-pulse" style={{ animationDuration: '6s', animationDelay: '1s' }}></div>
+                        <div className="absolute top-[40%] right-1/4 w-[250px] h-[250px] bg-cyan-400/20 blur-[90px] rounded-full pointer-events-none z-0 mix-blend-screen animate-pulse" style={{ animationDuration: '5s', animationDelay: '2s' }}></div>
+
+                        <FloatingBg />
+
+                        {/* Botón de Sonido Superior Derecho */}
+                        <div className="absolute top-4 right-4 z-20">
+                            <button
+                                onClick={handleToggleMute}
+                                className="p-3 rounded-2xl bg-white/10 backdrop-blur-md shadow-lg text-white hover:bg-white/20 transition-all hover:scale-110 active:scale-95 border border-white/10"
+                            >
+                                {muted ? <Icons.VolumeX size={24} className="text-rose-400" /> : <Icons.Volume2 size={24} />}
+                            </button>
+                        </div>
+
+                        {/* Contenido Principal de Portada */}
+                        <div className="relative z-10 text-center w-full max-w-7xl mt-4 sm:mt-0 flex flex-col items-center">
+                            <div className="inline-flex items-center gap-2 px-6 py-2 rounded-full border-2 border-cyan-400/40 bg-slate-900/40 backdrop-blur-xl text-cyan-300 font-black tracking-widest uppercase mb-5 shadow-2xl animate-slideInUp" style={{ animationDelay: '0.1s' }}>
+                                <Icons.BookOpen size={20} /> TuProfe20 Lab
+                            </div>
+
+                            <h1 className="text-4xl sm:text-6xl md:text-[5rem] leading-[1.08] font-black text-transparent bg-clip-text bg-gradient-to-br from-white via-cyan-200 to-blue-500 mb-5 drop-shadow-[0_4px_12px_rgba(0,0,0,0.5)] animate-slideInUp" style={{ animationDelay: '0.2s' }}>
+                                TuProfe20 Lab <br className="hidden sm:block" />Cuadriláteros-Trapecio
+                            </h1>
+
+                            <p className="text-base sm:text-xl md:text-2xl text-blue-200/90 mb-10 font-bold max-w-3xl mx-auto px-4 animate-slideInUp" style={{ animationDelay: '0.3s' }}>
+                                Selecciona un módulo interactivo para explorar la clasificación, mediana, diagonales y propiedades de los cuadriláteros en tiempo real con fórmulas en LaTeX. 📐✨
+                            </p>
+
+                            {/* Grid de Tarjetas de los 5 Módulos */}
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-5 w-full px-2 pb-8">
+                                {THEOREMS.map((ex, idx) => {
+                                    const CardIcon = Icons[ex.icon] || Icons.Shapes;
+                                    return (
+                                        <button
+                                            key={ex.id}
+                                            onClick={() => enterModule(idx)}
+                                            className={`group text-left p-6 rounded-[2rem] bg-gradient-to-br ${ex.color} border-[2px] border-white/15 backdrop-blur-xl hover:-translate-y-3 hover:scale-[1.02] hover:shadow-[0_20px_40px_rgba(0,0,0,0.45)] hover:border-white/45 transition-all duration-300 flex flex-col h-full relative overflow-hidden animate-slideInUp`}
+                                            style={{ animationDelay: `${0.35 + idx * 0.08}s`, animationFillMode: 'both' }}
+                                        >
+                                            <div className="absolute -bottom-4 -right-4 p-4 opacity-10 group-hover:opacity-25 group-hover:scale-125 transition-all duration-500 text-white">
+                                                <CardIcon size={92} />
+                                            </div>
+                                            <div className="bg-white/15 text-white text-xs font-bold px-4 py-1.5 rounded-full inline-block mb-3 shadow-sm backdrop-blur-md self-start border border-white/25">
+                                                {ex.badge}
+                                            </div>
+                                            <h3 className="text-xl font-black text-white mb-2 drop-shadow-md leading-tight">
+                                                {ex.shortTitle}
+                                            </h3>
+                                            <p className="text-white/80 text-xs sm:text-sm font-medium line-clamp-3 mb-4 leading-relaxed">
+                                                {ex.statement}
+                                            </p>
+                                            <div className="mt-auto bg-slate-950/45 border border-white/20 rounded-2xl px-3 py-2 text-cyan-200 text-center text-xs overflow-x-auto">
+                                                <Latex math={ex.id === 1 ? "\\alpha+\\beta=180^\\circ" : ex.id === 2 ? "x=\\frac{a+b}{2}" : ex.id === 3 ? "x=\\frac{b-a}{2}" : ex.latexFormula} />
+                                            </div>
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    </div>
+                );
+            }
+
+            /* ==========================================
+               VISTA 2: LABORATORIO INTERACTIVO UNIFICADO
+               ========================================== */
+            const dyn = getDynamicData();
+
+            return (
+                <div className="min-h-[100dvh] w-full bg-gradient-to-br from-indigo-500 via-purple-500 to-fuchsia-500 text-slate-800 flex flex-col p-2 sm:p-4 relative overflow-hidden select-none">
+                    <FloatingBg />
+
+                    {/* HEADER SUPERIOR */}
+                    <div className="shrink-0 relative z-10 w-full max-w-7xl mx-auto flex justify-between items-center mb-3 px-1 sm:px-2">
+                        <button
+                            onClick={() => {
+                                AudioController.init();
+                                AudioController.play('swoosh');
+                                setShowCover(true);
+                            }}
+                            className="flex items-center justify-center w-11 h-11 sm:w-auto sm:px-5 sm:py-2.5 rounded-[1.2rem] bg-white/20 border-2 border-white/40 backdrop-blur-md text-white font-black hover:bg-white/30 transition-all shadow-md active:scale-95 hover:scale-105"
+                        >
+                            <Icons.Home size={22} className="sm:mr-2" />
+                            <span className="hidden sm:inline text-base sm:text-lg">Portada</span>
+                        </button>
+
+                        <h2 className="text-sm sm:text-xl md:text-2xl font-black text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.4)] tracking-wide bg-black/25 px-4 sm:px-6 py-2 rounded-full border border-white/25 text-center truncate mx-2">
+                            {current.badge}: {current.shortTitle}
+                        </h2>
+
+                        <div className="flex items-center gap-2">
+                            <button
+                                onClick={() => setShowAuxLines(!showAuxLines)}
+                                title="Mostrar/Ocultar Líneas Guía"
+                                className={`flex items-center gap-1.5 px-3 py-2.5 rounded-[1.2rem] border-2 backdrop-blur-md font-black text-xs sm:text-sm transition-all shadow-md ${
+                                    showAuxLines
+                                        ? 'bg-amber-400/90 border-amber-200 text-slate-900'
+                                        : 'bg-white/20 border-white/40 text-white'
+                                }`}
+                            >
+                                <Icons.Eye size={18} />
+                                <span className="hidden md:inline">Guías</span>
+                            </button>
+
+                            <button
+                                onClick={handleToggleMute}
+                                className="flex p-2.5 sm:p-3 rounded-[1.2rem] bg-white/20 border-2 border-white/40 backdrop-blur-md text-white hover:bg-white/30 transition-all shadow-md active:scale-95 hover:scale-105"
+                            >
+                                {muted ? <Icons.VolumeX size={22} /> : <Icons.Volume2 size={22} />}
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* TARJETA UNIFICADA CON BORDE AZUL Y FONDO BLANCO CUADRICULADO */}
+                    <div className="flex-1 min-h-[65vh] relative z-10 w-full max-w-7xl mx-auto bg-[#fdfdfd] rounded-[1.5rem] sm:rounded-[2.5rem] border-[5px] sm:border-[8px] border-blue-600 shadow-[0_20px_50px_rgba(0,0,0,0.4)] flex flex-col overflow-hidden">
+                        
+                        {/* CUADRÍCULA MATEMÁTICA DE FONDO GLOBAL */}
+                        <div className="absolute inset-0 opacity-[0.16] bg-[linear-gradient(#475569_1px,transparent_1px),linear-gradient(90deg,#475569_1px,transparent_1px)] [background-size:20px_20px] pointer-events-none z-0"></div>
+
+                        {/* PIZARRA CENTRAL */}
+                        <div className="flex-1 flex flex-col items-center justify-start pt-3 pb-4 sm:pt-5 sm:pb-6 px-3 sm:px-6 relative overflow-y-auto w-full z-10">
+                            
+                            {/* CAJA DE ENUNCIADO ÁMBAR */}
+                            <div className="w-full max-w-6xl bg-amber-50 rounded-2xl border-l-[8px] border-amber-500 p-3.5 sm:p-5 mb-4 shadow-sm relative">
+                                <p className="text-slate-700 text-sm sm:text-lg font-bold mb-2">{current.statement}</p>
+                                <div className="flex flex-col sm:flex-row gap-2 sm:gap-6 text-xs sm:text-base font-black text-amber-800">
+                                    <span className="bg-amber-200/60 px-3 py-1 rounded-lg">{current.qa}</span>
+                                    <span className="bg-amber-200/60 px-3 py-1 rounded-lg">{current.qb}</span>
+                                </div>
+                            </div>
+
+                            {/* BANNER DUAL: IZQUIERDA (PIZARRA GEOMÉTRICA) | DERECHA (DEMOSTRACIÓN LATEX EN VIVO) */}
+                            <div className="w-full max-w-6xl bg-white/95 rounded-3xl shadow-md border-[4px] border-blue-600 flex flex-col lg:flex-row overflow-hidden relative z-10">
+                                
+                                {/* LADO IZQUIERDO: PIZARRA INTERACTIVA CUADRICULADA */}
+                                <div className="lg:w-[58%] p-3 sm:p-5 flex flex-col items-center justify-center relative bg-indigo-50/30">
+                                    <div className="w-full flex items-center justify-between mb-2 px-1">
+                                        <span className="px-3 py-1 bg-indigo-100 text-indigo-700 font-black rounded-full text-xs sm:text-sm uppercase tracking-wider">
+                                            a) Pizarra Geométrica Interactiva
+                                        </span>
+                                        <button
+                                            onClick={resetCurrent}
+                                            title="Restablecer vértices"
+                                            className="p-2 rounded-xl bg-white border-2 border-indigo-200 text-indigo-700 hover:bg-indigo-100 transition-all shadow-sm active:scale-90 flex items-center gap-1 text-xs font-bold"
+                                        >
+                                            <Icons.Refresh size={16} /> Reiniciar
+                                        </button>
+                                    </div>
+
+                                    {/* Lienzo SVG con Cuadrícula Matemática */}
+                                    <div className="w-full max-w-[460px] aspect-square flex items-center justify-center">
+                                        <svg
+                                            ref={svgRef}
+                                            className="interactive-svg w-full h-full rounded-2xl border-2 border-slate-300 shadow-inner bg-white"
+                                            viewBox="-260 -260 520 520"
+                                            onPointerMove={handlePointerMove}
+                                            onPointerUp={handlePointerUp}
+                                            onPointerLeave={handlePointerUp}
+                                        >
+                                            <defs>
+                                                <pattern id="minorGrid" width="20" height="20" patternUnits="userSpaceOnUse">
+                                                    <path d="M 20 0 L 0 0 0 20" fill="none" stroke="#e2e8f0" strokeWidth="1" />
+                                                </pattern>
+                                                <pattern id="majorGrid" width="100" height="100" patternUnits="userSpaceOnUse">
+                                                    <rect width="100" height="100" fill="url(#minorGrid)" />
+                                                    <path d="M 100 0 L 0 0 0 100" fill="none" stroke="#cbd5e1" strokeWidth="1.6" />
+                                                </pattern>
+                                            </defs>
+                                            <rect x="-260" y="-260" width="520" height="520" fill="url(#majorGrid)" />
+                                            {renderBoardGeometry()}
+                                        </svg>
+                                    </div>
+                                </div>
+
+                                {/* DIVISOR CENTRAL AZUL */}
+                                <div className="w-full h-[4px] lg:w-[4px] lg:h-auto bg-blue-600"></div>
+
+                                {/* LADO DERECHO: FÓRMULA LATEX Y RESULTADO DORADO */}
+                                <div className="lg:w-[42%] p-4 sm:p-6 flex flex-col items-center justify-between bg-fuchsia-50/35 relative">
+                                    <div className="w-full flex items-center justify-between mb-3">
+                                        <span className="px-3 py-1 bg-fuchsia-100 text-fuchsia-700 font-black rounded-full text-xs sm:text-sm uppercase tracking-wider">
+                                            b) Demostración Matemática (LaTeX)
+                                        </span>
+                                    </div>
+
+                                    {/* Selector de Clasificación (Solo en Módulo 1) */}
+                                    {current.type === 'classification' && (
+                                        <div className="w-full grid grid-cols-3 gap-2 my-2">
+                                            {[
+                                                { id: 'isosceles', label: 'Isósceles' },
+                                                { id: 'escaleno', label: 'Escaleno' },
+                                                { id: 'rectangulo', label: 'Rectángulo' }
+                                            ].map((m) => (
+                                                <button
+                                                    key={m.id}
+                                                    onClick={() => selectTrapMode(m.id)}
+                                                    className={`py-2.5 px-2 rounded-xl font-black text-xs uppercase border-b-4 transition-all ${
+                                                        trapMode === m.id
+                                                            ? 'bg-indigo-600 border-indigo-800 text-white shadow-md scale-105'
+                                                            : 'bg-white border-slate-300 text-slate-600 hover:bg-slate-100'
+                                                    }`}
+                                                >
+                                                    {m.label}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    )}
+
+                                    {/* Tarjeta de Propiedad General */}
+                                    <div className="w-full bg-white/90 backdrop-blur-md px-4 py-4 rounded-2xl border-2 border-slate-200 shadow-sm text-center my-2">
+                                        <span className="text-[11px] font-black uppercase tracking-wider text-slate-400 block mb-1">
+                                            TEOREMA GENERAL
+                                        </span>
+                                        <div className="text-xl sm:text-2xl text-slate-800 overflow-x-auto py-1">
+                                            <Latex math={current.latexFormula} block />
+                                        </div>
+                                    </div>
+
+                                    {/* Reemplazo Numérico Paso a Paso */}
+                                    <div className="w-full bg-white/90 backdrop-blur-md px-4 py-4 rounded-2xl border-2 border-slate-200 shadow-sm text-center my-2">
+                                        <span className="text-[11px] font-black uppercase tracking-wider text-emerald-600 block mb-1">
+                                            SUSTITUCIÓN EN TIEMPO REAL
+                                        </span>
+                                        <div className="text-xl sm:text-2xl text-slate-800 overflow-x-auto py-1">
+                                            <Latex math={dyn.liveFormula} block />
+                                        </div>
+                                    </div>
+
+                                    {/* Resultado Destacado Estilo Dorado */}
+                                    <div className="w-full bg-gradient-to-br from-[#fde047] to-[#eab308] px-6 py-4 rounded-3xl shadow-[0_10px_25px_rgba(234,179,8,0.35)] border-[5px] border-[#ca8a04] text-center my-2">
+                                        <span className="text-[11px] font-black uppercase tracking-widest text-amber-950/80 block mb-0.5">
+                                            VALOR CALCULADO
+                                        </span>
+                                        <div className="text-3xl sm:text-4xl text-black font-black">
+                                            <Latex math={dyn.highlightResult} block />
+                                        </div>
+                                    </div>
+                                </div>
+
+                            </div>
+                        </div>
+
+                        {/* SECCIÓN DE EXPLICACIÓN DEL ROBOT */}
+                        <div className="shrink-0 bg-white/85 backdrop-blur-md w-full px-4 py-3 sm:px-8 sm:py-4 flex items-center gap-4 sm:gap-6 border-t-[5px] border-slate-200 z-10 relative">
+                            <div className="shrink-0">
+                                <RobotAssistant isDragging={Boolean(dragState)} activeIdx={activeIdx} />
+                            </div>
+                            <div className="flex-1 text-sm sm:text-lg md:text-xl font-bold text-slate-800 leading-snug sm:leading-relaxed bg-slate-50/90 sm:bg-transparent p-3 sm:p-0 rounded-2xl border border-slate-200 sm:border-none">
+                                {dyn.robotMsg}
+                            </div>
+                        </div>
+
+                        {/* CONTROLES INFERIORES ESTILO TÁCTIL 3D */}
+                        <div className="shrink-0 bg-white/90 backdrop-blur-md p-3 sm:p-5 w-full flex flex-col items-center gap-3 border-t-[5px] border-slate-200 z-10 relative">
+                            <div className="flex justify-center items-stretch w-full max-w-4xl gap-3 sm:gap-4 h-14 sm:h-16">
+                                <button
+                                    onClick={() => {
+                                        AudioController.init();
+                                        AudioController.play('pop-reverse');
+                                        setActiveIdx((activeIdx - 1 + THEOREMS.length) % THEOREMS.length);
+                                    }}
+                                    className="flex-[0.8] bg-indigo-300 border-b-[6px] border-indigo-500 text-indigo-900 rounded-l-[1.4rem] rounded-r-2xl font-black text-base sm:text-xl flex items-center justify-center gap-1 sm:gap-2 active:border-b-0 active:translate-y-[6px] transition-all hover:bg-indigo-200"
+                                >
+                                    <Icons.ChevronLeft size={28} />
+                                    <span className="hidden sm:inline">Anterior</span>
+                                </button>
+
+                                <div className="bg-indigo-600 text-white font-black px-4 sm:px-8 text-base sm:text-xl flex items-center justify-center rounded-2xl border-b-[6px] border-indigo-800 shadow-inner whitespace-nowrap">
+                                    Módulo {activeIdx + 1} / {THEOREMS.length}
+                                </div>
+
+                                <button
+                                    onClick={() => {
+                                        AudioController.init();
+                                        AudioController.play('success');
+                                        setActiveIdx((activeIdx + 1) % THEOREMS.length);
+                                    }}
+                                    className="flex-[1.8] bg-gradient-to-r from-[#f59e0b] to-[#f97316] border-b-[6px] border-[#c2410c] text-white rounded-r-[1.4rem] rounded-l-2xl font-black text-base sm:text-2xl flex items-center justify-center gap-1 sm:gap-2 active:border-b-0 active:translate-y-[6px] transition-all hover:brightness-110 shadow-sm"
+                                >
+                                    <span>Siguiente Módulo</span>
+                                    <Icons.ChevronRight size={28} />
+                                </button>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
